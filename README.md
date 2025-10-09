@@ -38,6 +38,9 @@ pip install boto3
     - Create the user
     - Select the user and create Access Key
     - Save the Access Key ID and Secret Access Key
+
+## Approach 1 - Using Python Script
+
 2. **Configure AWS CLI**:
 
 ```bash
@@ -118,3 +121,124 @@ When you run the script:
     - Mixed: `1,3-5,7`
 4. **Files are downloaded** to a `./downloads` folder
 5. **Choose to continue or exit** after each download session
+
+
+## Approach 2 - Using Powershell Script
+
+### Prerequisites
+
+PowerShell 5.1 or later (PowerShell Core 7+ recommended)
+AWS.Tools.S3 module
+
+### Installation Steps
+
+1. Install AWS.Tools.S3 module:
+
+```powershell   
+Install-Module -Name AWS.Tools.S3 -Scope CurrentUser
+```
+
+2. Configure AWS Credentials Choose one of these methods: 
+**Option A: Using AWS CLI**
+
+```bash   
+aws configure
+```
+**Option B: Using PowerShell**
+
+```powershell   
+Set-AWSCredential -AccessKey YOUR_ACCESS_KEY -SecretKey YOUR_SECRET_KEY -StoreAs default
+```
+**Option C: Environment Variables**
+
+```powershell   
+$env:AWS_ACCESS_KEY_ID = "YOUR_ACCESS_KEY"
+$env:AWS_SECRET_ACCESS_KEY = "YOUR_SECRET_KEY"
+```
+### Run the PowerShell Script
+
+1. Save the script as download.ps1
+2. Navigate to the script directory:
+
+### Run the script:
+
+```powershell   
+.\s3_download.ps1
+```
+
+### Required AWS Permissions
+Your AWS IAM user/role needs these permissions:
+```json{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:ListBucket",
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket-name",
+        "arn:aws:s3:::your-bucket-name/*"
+      ]
+    }
+  ]
+}
+```
+### Using the Scripts
+**Both scripts work similarly:**
+### Example Session
+```
+============================================================
+        AWS S3 File Download Manager
+============================================================
+
+Enter S3 bucket name: my-download-bucket-12345
+
+[OK] Connected to: my-download-bucket-12345 (Region: us-east-1)
+
+Listing files...
+------------------------------------------------------------
+1. document.pdf
+   2.45 MB | 2024-10-01 14:30:22
+2. image.png
+   856.34 KB | 2024-10-02 09:15:10
+3. data.csv
+   124.56 KB | 2024-10-03 16:45:33
+------------------------------------------------------------
+Total: 3 files
+
+Enter file numbers (e.g., 1,3,5 or 1-3): 1,3
+
+Downloading 2 file(s)...
+------------------------------------------------------------
+Downloading: document.pdf... [OK]
+   -> ./downloads/document.pdf
+Downloading: data.csv... [OK]
+   -> ./downloads/data.csv
+------------------------------------------------------------
+Complete: 2/2 downloaded
+
+Download more? (yes/no): no
+
+Goodbye!
+```
+### Selection Syntax
+When selecting files to download:
+
+* Single file: 1 or 3
+* Multiple files: 1,2,5
+* Range: 1-3 (downloads files 1, 2, and 3)
+* Mixed: 1,3-5,7
+
+### Download Location
+Files are downloaded to the ```./downloads``` folder in the current directory. The folder is created automatically if it doesn't exist.
+
+### Features
+
+* 🔍 Auto-detect bucket region - No need to specify the region manually
+* 📋 Interactive file listing - See all files with sizes and modification dates
+* 🎯 Flexible selection - Download single files, multiple files, or ranges
+* 📦 Batch downloads - Download multiple files in one go
+* 🔄 Repeat sessions - Download multiple batches without restarting
