@@ -33,8 +33,10 @@ pip install boto3
 
 1. **Create an IAM User** (if you don't have one):
     - Go to AWS Console → IAM → Users → Add User
-    - Enable "Programmatic access"
-    - Attach policy: `AmazonS3FullAccess` (or create a custom policy with S3 permissions)
+    - In set permissions select Attach policies directly option
+    - Then, Attach policy: `AmazonS3FullAccess` (or create a custom policy with S3 permissions)
+    - Create the user
+    - Select the user and create Access Key
     - Save the Access Key ID and Secret Access Key
 2. **Configure AWS CLI**:
 
