@@ -123,6 +123,125 @@ When you run the script:
 5. **Choose to continue or exit** after each download session
 
 
+## Approach 1A - Using Python Script with AWS SSO Authentication
+
+This approach is for users who authenticate to AWS using SSO (Single Sign-On) instead of Access Keys.
+
+### Prerequisites
+
+1. **AWS CLI** - Follow the official guide: [https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+2. **Python 3.x** - Download from [https://www.python.org/downloads/](https://www.python.org/downloads/)
+
+In Windows:
+
+Create and activate a virtual environment:
+
+```bash
+python -m venv venv
+```
+
+Then activate the Environment:
+
+```bash
+venv\Scripts\activate
+```
+
+3. **Boto3 (AWS SDK for Python)**:
+
+```bash
+pip install boto3
+```
+
+### Step 1: Configure AWS SSO
+
+**Get SSO Information from Your AWS Administrator:**
+
+Ask your AWS administrator for:
+- **SSO Start URL** (e.g., `https://my-company.awsapps.com/start`)
+- **SSO Region** (e.g., `us-east-1`)
+- Your **SSO username/email**
+
+**Configure SSO:**
+
+```bash
+aws configure sso
+```
+
+Follow the prompts and enter:
+- **SSO session name**: `my-company-sso` (or any name you prefer)
+- **SSO start URL**: `https://my-company.awsapps.com/start` (provided by admin)
+- **SSO region**: `us-east-1` (provided by admin)
+- **SSO registration scopes**: Press Enter for default
+- A browser window will open - login with your credentials
+- Select your AWS account
+- Select a permission set (role)
+- **CLI default client Region**: `us-east-1` (or your preferred region)
+- **CLI default output format**: `json`
+- **CLI profile name**: `my-sso-profile` (choose any name)
+
+### Step 2: Login to SSO
+
+Before running the script, authenticate with SSO:
+
+```bash
+aws sso login --profile my-sso-profile
+```
+
+This will open a browser for authentication. You'll need to do this each time your SSO session expires (typically every 8-12 hours).
+
+### Step 3: Run the SSO-enabled Script
+
+1. **Save the script** as `s3_downloader_sso.py`
+
+2. **Make it executable** (Linux/Mac):
+
+```bash
+chmod +x s3_downloader_sso.py
+```
+
+3. **Run the script**:
+
+```bash
+python s3_downloader_sso.py
+```
+
+### Step 4: Using the SSO Script
+
+When you run the script:
+
+1. **View available AWS profiles** - The script will list all configured profiles
+2. **Enter your AWS profile name** when prompted (e.g., `my-sso-profile`) or press Enter for default
+3. **Enter your bucket name** when prompted
+4. **View the file list** - all files with their sizes and modification dates
+5. **Select files to download**:
+    - Single files: `1` or `3`
+    - Multiple files: `1,2,5`
+    - Range: `1-3` (downloads files 1, 2, and 3)
+    - Mixed: `1,3-5,7`
+6. **Files are downloaded** to a `./downloads` folder
+7. **Choose to continue or exit** after each download session
+
+### Troubleshooting SSO
+
+**If you get "credentials expired" error:**
+
+```bash
+aws sso login --profile my-sso-profile
+```
+
+**To check your SSO session status:**
+
+```bash
+aws sts get-caller-identity --profile my-sso-profile
+```
+
+**To list all configured profiles:**
+
+```bash
+aws configure list-profiles
+```
+
+
 ## Approach 2 - Using Powershell Script
 
 ### Prerequisites
