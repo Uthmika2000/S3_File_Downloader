@@ -21,18 +21,17 @@ class S3DownloadManager {
             $params = @{
                 BucketName = $this.BucketName
             }
-            
             if ($this.ProfileName) {
                 $params['ProfileName'] = $this.ProfileName
                 Write-Host " Using AWS profile: $($this.ProfileName)" -ForegroundColor Green
             }
-            
-            $null = Get-S3Bucket -BucketName $this.BucketName @params -ErrorAction Stop
+
+            $null = Get-S3Object @params -MaxKeys 1 -ErrorAction Stop
             Write-Host " Successfully connected to bucket: $($this.BucketName)`n" -ForegroundColor Green
         }
         catch {
             if ($_.Exception.Message -match "not found|does not exist") {
-                Write-Host "ERROR: Bucket '$($this.BucketName)' does not exist" -ForegroundColor Red
+                Write-Host "ERROR: Bucket '$($this.BucketName)' does not exist!" -ForegroundColor Red
             }
             elseif ($_.Exception.Message -match "Access Denied|403") {
                 Write-Host "ERROR: Access denied to bucket '$($this.BucketName)'" -ForegroundColor Red
@@ -61,7 +60,6 @@ class S3DownloadManager {
             $params = @{
                 BucketName = $this.BucketName
             }
-            
             if ($this.ProfileName) {
                 $params['ProfileName'] = $this.ProfileName
             }
@@ -75,14 +73,12 @@ class S3DownloadManager {
             
             $files = @()
             $idx = 1
-            
             foreach ($obj in $objects) {
                 $fileName = $obj.Key
                 $fileSize = $obj.Size
                 $lastModified = $obj.LastModified.ToString("yyyy-MM-dd HH:mm:ss")
                 
                 $files += $fileName
-                
                 Write-Host "$idx. $fileName"
                 Write-Host "   Size: $($this.FormatSize($fileSize)) | Last Modified: $lastModified"
                 $idx++
@@ -90,7 +86,6 @@ class S3DownloadManager {
             
             Write-Host ("-" * 60)
             Write-Host "Total files: $($files.Count)`n"
-            
             return $files
         }
         catch {
@@ -103,12 +98,10 @@ class S3DownloadManager {
         $units = @('B', 'KB', 'MB', 'GB', 'TB')
         $size = [double]$sizeBytes
         $unitIndex = 0
-        
         while ($size -ge 1024 -and $unitIndex -lt ($units.Count - 1)) {
             $size = $size / 1024
             $unitIndex++
         }
-        
         return "{0:N2} {1}" -f $size, $units[$unitIndex]
     }
     
@@ -119,15 +112,13 @@ class S3DownloadManager {
             }
             
             $localFilePath = Join-Path $downloadPath (Split-Path $fileName -Leaf)
-            
             Write-Host "Downloading: $fileName..." -NoNewline
             
             $params = @{
                 BucketName = $this.BucketName
-                Key = $fileName
-                File = $localFilePath
+                Key        = $fileName
+                LocalFile  = $localFilePath
             }
-            
             if ($this.ProfileName) {
                 $params['ProfileName'] = $this.ProfileName
             }
@@ -136,7 +127,6 @@ class S3DownloadManager {
             
             Write-Host "  Success" -ForegroundColor Green
             Write-Host "   Saved to: $localFilePath"
-            
             return $true
         }
         catch {
@@ -145,77 +135,61 @@ class S3DownloadManager {
         }
     }
     
-    [array]GetUserSelection([int]$totalFiles) {
+    [System.Collections.ArrayList]GetUserSelection([int]$totalFiles) {
+        $result = [System.Collections.ArrayList]::new()
         while ($true) {
             try {
                 $selection = Read-Host "`nEnter file numbers to download (e.g., 1,3,5 or 1-3)"
                 $selection = $selection.Trim()
-                
                 if ([string]::IsNullOrEmpty($selection)) {
                     Write-Host "No selection made. Please try again."
                     continue
                 }
                 
-                $selectedIndices = @()
+                $selectedIndices = [System.Collections.ArrayList]::new()
                 $parts = $selection -split ','
-                
-                foreach ($part in $parts) {
-                    $part = $part.Trim()
-                    
+                foreach ($partRaw in $parts) {
+                    $part = $partRaw.Trim()
                     if ($part -match '-') {
                         $range = $part -split '-'
                         $start = [int]$range[0].Trim()
-                        $end = [int]$range[1].Trim()
-                        
+                        $end   = [int]$range[1].Trim()
                         if ($start -lt 1 -or $end -gt $totalFiles -or $start -gt $end) {
                             throw "Invalid range"
                         }
-                        
-                        $selectedIndices += $start..$end
-                    }
-                    else {
+                        for ($i = $start; $i -le $end; $i++) { [void]$selectedIndices.Add($i) }
+                    } else {
                         $num = [int]$part
-                        
-                        if ($num -lt 1 -or $num -gt $totalFiles) {
-                            throw "Invalid number"
-                        }
-                        
-                        $selectedIndices += $num
+                        if ($num -lt 1 -or $num -gt $totalFiles) { throw "Invalid number" }
+                        [void]$selectedIndices.Add($num)
                     }
                 }
                 
-                $selectedIndices = $selectedIndices | Select-Object -Unique | Sort-Object
-                
-                return $selectedIndices
+                $uniqueSorted = $selectedIndices | Select-Object -Unique | Sort-Object
+                foreach ($item in $uniqueSorted) { [void]$result.Add($item) }
+                return $result
             }
             catch {
                 Write-Host "Invalid input! Please enter numbers between 1 and $totalFiles" -ForegroundColor Red
                 Write-Host "Examples: '1,2,3' or '1-3' or '1,3-5'" -ForegroundColor Yellow
             }
         }
-        
-        return @()
+        return $result
     }
     
     [void]Run() {
         while ($true) {
             $files = $this.ListFiles()
-            
-            if ($files.Count -eq 0) {
-                break
-            }
+            if ($files.Count -eq 0) { break }
             
             $selectedIndices = $this.GetUserSelection($files.Count)
-            
             Write-Host "`nYou selected $($selectedIndices.Count) file(s)"
             Write-Host ("-" * 60)
             
             $successCount = 0
             foreach ($idx in $selectedIndices) {
                 $fileName = $files[$idx - 1]
-                if ($this.DownloadFile($fileName, ".\downloads")) {
-                    $successCount++
-                }
+                if ($this.DownloadFile($fileName, ".\downloads")) { $successCount++ }
             }
             
             Write-Host ("-" * 60)
@@ -224,18 +198,9 @@ class S3DownloadManager {
             while ($true) {
                 $continueChoice = Read-Host "Do you want to download more files? (yes/no)"
                 $continueChoice = $continueChoice.Trim().ToLower()
-                
-                if ($continueChoice -in @('yes', 'y')) {
-                    Write-Host ""
-                    break
-                }
-                elseif ($continueChoice -in @('no', 'n')) {
-                    Write-Host "`nExiting... Goodbye!"
-                    return
-                }
-                else {
-                    Write-Host "Please enter 'yes' or 'no'" -ForegroundColor Yellow
-                }
+                if ($continueChoice -in @('yes','y')) { Write-Host ""; break }
+                elseif ($continueChoice -in @('no','n')) { Write-Host "`nExiting... Goodbye!"; return }
+                else { Write-Host "Please enter 'yes' or 'no'" -ForegroundColor Yellow }
             }
         }
     }
@@ -244,31 +209,20 @@ class S3DownloadManager {
 function Get-AvailableProfiles {
     try {
         $configPath = Join-Path $env:USERPROFILE ".aws\config"
-        
         if (Test-Path $configPath) {
             $profiles = @()
             $content = Get-Content $configPath
-            
             foreach ($line in $content) {
-                if ($line -match '^\[profile\s+(.+)\]') {
-                    $profiles += $matches[1]
-                }
-                elseif ($line -match '^\[(.+)\]' -and $line -notmatch 'default') {
-                    $profiles += $matches[1]
-                }
+                if ($line -match '^\[profile\s+(.+)\]') { $profiles += $matches[1] }
+                elseif ($line -match '^\[(.+)\]' -and $line -notmatch 'default') { $profiles += $matches[1] }
             }
-            
             $credentialsPath = Join-Path $env:USERPROFILE ".aws\credentials"
             if (Test-Path $credentialsPath) {
                 $credContent = Get-Content $credentialsPath
-                if ($credContent -match '^\[default\]') {
-                    $profiles = @('default') + $profiles
-                }
+                if ($credContent -match '^\[default\]') { $profiles = @('default') + $profiles }
             }
-            
             return $profiles | Select-Object -Unique
         }
-        
         return @()
     }
     catch {
@@ -284,7 +238,6 @@ function Main {
     Write-Host ""
     
     $profiles = Get-AvailableProfiles
-    
     if ($profiles.Count -gt 0) {
         Write-Host "Available AWS profiles:"
         $idx = 1
@@ -297,22 +250,18 @@ function Main {
     
     $profileName = Read-Host "Enter your AWS profile name (press Enter for default)"
     $profileName = $profileName.Trim()
-    
     if ([string]::IsNullOrEmpty($profileName)) {
         $profileName = $null
         Write-Host "Using default profile"
     }
-    
     Write-Host ""
     
     $bucketName = Read-Host "Enter your S3 bucket name"
     $bucketName = $bucketName.Trim()
-    
     if ([string]::IsNullOrEmpty($bucketName)) {
         Write-Host "ERROR: Bucket name cannot be empty!" -ForegroundColor Red
         return
     }
-    
     Write-Host ""
     
     $manager = [S3DownloadManager]::new($bucketName, $profileName)
