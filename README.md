@@ -338,6 +338,13 @@ Before running the script, authenticate with SSO:
 ```bash
 aws sso login --profile my-sso-profile
 ```
+or if it doesn't work.
+Force it for the whole PS session before running the script:
+
+```bash
+$env:AWS_PROFILE = 'inyops23a_profile'
+aws sso login --profile $env:AWS_PROFILE
+```
 
 This will open a browser for authentication. You'll need to do this each time your SSO session expires (typically every 8-12 hours).
 
