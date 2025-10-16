@@ -342,7 +342,7 @@ or if it doesn't work.
 Force it for the whole PS session before running the script:
 
 ```bash
-$env:AWS_PROFILE = 'inyops23a_profile'
+$env:AWS_PROFILE = 'your_profile'
 aws sso login --profile $env:AWS_PROFILE
 ```
 
